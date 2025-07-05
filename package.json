@@ -1,6 +1,6 @@
 {
   "name": "haax-blp",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "author": "Haaxor1689",
   "license": "MIT",
   "repository": {
@@ -35,7 +35,9 @@
     "@haaxor1689/nil": "^1.0.3",
     "commander": "^11.1.0",
     "dxt-js": "^0.0.3",
-    "rgbquant": "^1.1.2",
+    "rgbquant": "^1.1.2"
+  },
+  "peerDependencies": {
     "sharp": "^0.34.2"
   }
 }
