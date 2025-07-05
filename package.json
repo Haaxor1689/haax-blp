@@ -1,0 +1,41 @@
+{
+  "name": "haax-blp",
+  "version": "0.1.0",
+  "author": "Haaxor1689",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Haaxor1689/haax-blp.git"
+  },
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "require": "./dist/index.js",
+      "import": "./dist/index.mjs",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist/**/*"
+  ],
+  "scripts": {
+    "dev": "bun run src/index.ts",
+    "bundle": "bun build ./src/index.ts --compile --minify --outfile haax-blp",
+    "build": "tsup src/blp/index.ts --format esm,cjs --dts --minify",
+    "prepublish": "bun run build"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.2.4",
+    "typescript": "^5.8.2",
+    "tsup": "^6.7.0"
+  },
+  "dependencies": {
+    "@haaxor1689/nil": "^1.0.3",
+    "commander": "^11.1.0",
+    "dxt-js": "^0.0.3",
+    "rgbquant": "^1.1.2",
+    "sharp": "^0.34.2"
+  }
+}

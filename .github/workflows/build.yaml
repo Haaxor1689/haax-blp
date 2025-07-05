@@ -1,0 +1,60 @@
+name: Build and Release
+
+on: push
+
+jobs:
+  build-and-release:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os:
+          - windows-latest
+          - ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Build the project
+        run: bun run bundle
+
+      - name: Check if Tag Exists
+        id: check_tag
+        run: |
+          version=$(bun -e "console.log(require('./package.json').version)")
+          tag_exists=$(git ls-remote --tags origin "refs/tags/v$version")
+          if [ -z "$tag_exists" ]; then
+            echo "Tag does not exist. Creating tag..."
+            git config --global user.email "actions@github.com"
+            git config --global user.name "${{ github.actor }}"
+            git tag -a -m "Tag for version $version" "v$version"
+            git push origin "v$version"
+          else
+            echo "Tag v$version already exists."
+          fi
+          echo "::set-output name=tag_name::v$version"
+        shell: bash
+
+      - name: Determine Artifact File
+        id: determine_artifact
+        run: |
+          if [ "${{ runner.os }}" == "Windows" ]; then
+            echo "::set-output name=artifact_file::haax-blp.exe"
+          else
+            echo "::set-output name=artifact_file::haax-blp"
+          fi
+        shell: bash
+
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: ${{ steps.determine_artifact.outputs.artifact_file }}
+          tag_name: ${{ steps.check_tag.outputs.tag_name }}
