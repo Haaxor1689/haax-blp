@@ -1,7 +1,6 @@
 import n from '@haaxor1689/nil';
 import dxtJs from 'dxt-js';
 import RgbQuant from 'rgbquant';
-import sharp from 'sharp';
 
 import {
   BlpCompression,
@@ -12,6 +11,37 @@ import {
 } from './utils';
 
 const IMAGE_DATA_OFFSET = 148; // BLP header size
+
+const resizeImage = async (
+  buffer: Uint8Array,
+  currentWidth: number,
+  currentHeight: number,
+  newWidth: number,
+  newHeight: number
+) => {
+  try {
+    const { default: sharp } = await import('sharp');
+    return sharp(buffer, {
+      raw: { width: currentWidth, height: currentHeight, channels: 4 }
+    })
+      .resize(newWidth, newHeight)
+      .raw()
+      .toBuffer();
+  } catch {
+    // Fallback to Jimp if Sharp is not available
+    const { Jimp } = await import('jimp');
+    return (
+      await Jimp.fromBitmap({
+        data: buffer,
+        width: currentWidth,
+        height: currentHeight
+      }).resize({
+        w: newWidth,
+        h: newHeight
+      })
+    ).bitmap.data;
+  }
+};
 
 export const Blp = n
   .object({
@@ -42,7 +72,7 @@ export const Blp = n
               256,
               [0, 0, 0, 0],
               true
-            ).fromBuffer(new Uint8Array(imageData.buffer, 0, 256 * 4))
+            ).fromBuffer(new Uint8Array(imageData.slice(0, 256 * 4)))
           : [];
 
       const mips = await Promise.all(
@@ -120,18 +150,6 @@ export const Blp = n
                 );
                 break;
               }
-              case 'COLOR_JPEG': {
-                buffer = new Uint8Array(
-                  await sharp(
-                    new Uint8Array(imageData.buffer, offset, mipSizes[i])
-                  )
-                    .jpeg()
-                    .raw()
-                    .ensureAlpha()
-                    .toBuffer()
-                );
-                break;
-              }
               default:
                 throw new Error(
                   `Unsupported BLP format "${v.format}" for compression "${v.compression}"`
@@ -158,23 +176,26 @@ export const Blp = n
             // Load original mip
             let width = mips[0].width;
             let height = mips[0].height;
-            let current = sharp(mips[0].buffer, {
-              raw: { width, height, channels: 4 }
-            });
+            let currentBuffer = mips[0].buffer;
+
             do {
               // Calculate half size
               width = Math.max(Math.floor(width / 2), 1);
               height = Math.max(Math.floor(height / 2), 1);
 
               // Resize
-              current = current
-                .resize(width, height, { kernel: 'nearest' })
-                .clone();
+              currentBuffer = await resizeImage(
+                currentBuffer,
+                result[result.length - 1]?.width ?? mips[0].width,
+                result[result.length - 1]?.height ?? mips[0].height,
+                width,
+                height
+              );
 
               result.push({
                 width,
                 height,
-                buffer: new Uint8Array([...(await current.raw().toBuffer())])
+                buffer: currentBuffer
               });
             } while (width > 1 || height > 1);
             return result;
@@ -272,21 +293,6 @@ export const Blp = n
                     : 0
                 )
               })
-            );
-            break;
-          }
-          case 'COLOR_JPEG': {
-            if (v.compression !== 'PIXEL_UNSPECIFIED')
-              throw new Error(
-                `Unsupported BLP compression "${v.compression}" for format "${v.format}"`
-              );
-
-            buffers.push(
-              await sharp(mip.buffer, {
-                raw: { width: mip.width, height: mip.height, channels: 4 }
-              })
-                .jpeg()
-                .toBuffer()
             );
             break;
           }
