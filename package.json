@@ -29,11 +29,11 @@
   "devDependencies": {
     "@types/bun": "^1.2.4",
     "typescript": "^5.8.2",
-    "tsup": "^6.7.0"
+    "tsup": "^6.7.0",
+    "commander": "^11.1.0"
   },
   "dependencies": {
     "@haaxor1689/nil": "^1.0.3",
-    "commander": "^11.1.0",
     "dxt-js": "^0.0.3",
     "rgbquant": "^1.1.2"
   },

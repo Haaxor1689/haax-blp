@@ -11,17 +11,17 @@ export const blpToPng = async (filePath: string) => {
     .toBuffer();
 };
 
-export const pngToBlp = async (filePath: string) => {
+export const pngToBlp = async (
+  filePath: string,
+  options: Pick<Blp, 'alphaSize' | 'compression' | 'format' | 'mipMaps'>
+) => {
   const png = sharp(await Bun.file(filePath).arrayBuffer());
   const { width, height } = await png.metadata();
   const buffer = await png.raw().toBuffer();
   return Blp.toBuffer({
     signature: 'BLP2',
     version: 1,
-    format: 'COLOR_DXT',
-    alphaSize: 8,
-    compression: 'PIXEL_DXT5',
-    mipMaps: 'MIPS_NONE',
+    ...options,
 
     width,
     height,
