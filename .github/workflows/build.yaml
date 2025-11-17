@@ -58,4 +58,3 @@ jobs:
         with:
           files: ${{ steps.determine_artifact.outputs.artifact_file }}
           tag_name: ${{ steps.check_tag.outputs.tag_name }}
-          overwrite: true
