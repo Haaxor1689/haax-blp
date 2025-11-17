@@ -38,7 +38,7 @@
     "rgbquant": "^1.1.2"
   },
   "optionalDependencies": {
-    "sharp": "^0.34.2",
+    "sharp": "^0.34.5",
     "jimp": "^1.6.0"
   }
 }
