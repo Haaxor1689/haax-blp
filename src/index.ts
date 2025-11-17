@@ -7,7 +7,7 @@ import { readdir } from 'node:fs/promises';
 import { pngToBlp, blpToPng } from './converter';
 
 import pkg from '../package.json';
-import type { Blp } from './blp';
+import { type Blp } from './blp';
 
 const pad = (v: number, p = 2) => v.toString().padStart(p, '0');
 const getTimeElapsed = (startDate: Date, endDate = new Date()) => {
