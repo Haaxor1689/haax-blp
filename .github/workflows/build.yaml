@@ -21,16 +21,9 @@ jobs:
           bun-version: latest
 
       - name: Install dependencies
-        if: runner.os == 'Windows'
         run: |
-          bun install --force --os=win32 --cpu=x64 sharp
-          bun install --force @img/sharp-win32-x64
-
-      - name: Install dependencies
-        if: runner.os == 'Linux'
-        run: |
-          bun install --force --os=linux --cpu=x64 sharp
-          bun install --force @img/sharp-linux-x64
+          bun install
+          bun install sharp@0.34.2
 
       - name: Build the project
         run: bun run bundle
