@@ -30,26 +30,34 @@ jobs:
           index 3428c5fefae5c7fc02f18a6a9026ac6a7df190e4..fd8dbff27768dae8242f77eeeb53f4dc910fd0c3 100644
           --- a/node_modules/sharp/lib/sharp.js
           +++ b/node_modules/sharp/lib/sharp.js
-          @@ -6,6 +6,7 @@
-           // Inspects the runtime environment and exports the relevant sharp.node binary
-
-           const { familySync, versionSync } = require('detect-libc');
+          @@ -1,6 +1,7 @@
+          /*!
+            Copyright 2013 Lovell Fuller and others.
+            SPDX-License-Identifier: Apache-2.0
+          */
           +const { join } = require('node:path');
 
-           const { runtimePlatformArch, isUnsupportedNodeRuntime, prebuiltPlatforms, minimumLibvipsVersion } = require('./libvips');
-           const runtimePlatform = runtimePlatformArch();
-          @@ -29,6 +30,11 @@ for (const path of paths) {
-             }
-           }
+          // Inspects the runtime environment and exports the relevant sharp.node binary
 
-          +if (!sharp && Bun.embeddedFiles.length) {
-          +  const sharpModule = Bun.embeddedFiles.find(file => /sharp-(.*).node$/.test(file.name));
-          +  sharp = require(join(import.meta.dirname, sharpModule.name));
+          @@ -33,6 +34,17 @@ for (path of paths) {
+            }
+          }
+
+          +// Bun embedded file fallback
+          +// If Bun compiled the binary and embedded sharp-<platform>.node,
+          +// load it from Bun.embeddedFiles instead of filesystem paths
+          +if (!sharp && typeof Bun !== 'undefined' && Bun.embeddedFiles?.length) {
+          +  const embedded = Bun.embeddedFiles.find(f =>
+          +    /sharp-(.*)\.node$/.test(f.name)
+          +  );
+          +  if (embedded) {
+          +    sharp = require(join(import.meta.dirname, embedded.name));
+          +  }
           +}
-          +
-           /* istanbul ignore next */
-           if (sharp) {
-             module.exports = sharp;
+
+          if (sharp && path && path.startsWith('@img/sharp-linux-x64') && !sharp._isUsingX64V2()) {
+            const err = new Error('Prebuilt binaries for linux-x64 require v2 microarchitecture');
+            err.code = 'Unsupported CPU';
           EOF
 
       - name: Inject embedded sharp loader into index.ts
