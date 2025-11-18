@@ -30,22 +30,13 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          if (Test-Path haax-blp) {
-            Compress-Archive -Path haax-blp -DestinationPath haax-blp-windows.zip -Force
-          } else {
-            Write-Error "haax-blp folder not found"
-            exit 1
-          }
+          Compress-Archive -Path haax-blp -DestinationPath haax-blp-windows.zip -Force
           Write-Output "artifact_file=haax-blp-windows.zip" >> $env:GITHUB_OUTPUT
 
       - name: Zip haax-blp folder (Linux)
         if: runner.os != 'Windows'
         shell: bash
         run: |
-          if [ ! -d "haax-blp" ]; then
-            echo "ERROR: haax-blp folder not found"
-            exit 1
-          fi
           zip -r haax-blp-linux.zip haax-blp
           echo "artifact_file=haax-blp-linux.zip" >> $GITHUB_OUTPUT
 
@@ -64,10 +55,10 @@ jobs:
           else
             echo "Tag v$version already exists."
           fi
-          echo "::set-output name=tag_name::v$version"
+          echo "tag_name=v$version" >> $GITHUB_OUTPUT
 
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
-          files: ${{ steps.determine_artifact.outputs.artifact_file }}
+          files: ${{ steps.zip_haax_blp_windows.outputs.artifact_file || steps.zip_haax_blp_linux.outputs.artifact_file }}
           tag_name: ${{ steps.check_tag.outputs.tag_name }}
