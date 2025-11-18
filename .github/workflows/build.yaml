@@ -59,6 +59,7 @@ jobs:
           ' "$FILE" > "$FILE.tmp" && mv "$FILE.tmp" "$FILE"
 
       - name: Inject embedded sharp loader into index.ts
+        shell: bash
         run: |
           RUNTIME=$(node -e "console.log(require('./node_modules/sharp/lib/libvips').runtimePlatformArch())")
           NODEFILE="node_modules/@img/sharp-${RUNTIME}/lib/sharp-${RUNTIME}.node"
