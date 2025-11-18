@@ -20,24 +20,46 @@ jobs:
         with:
           bun-version: latest
 
-      - name: Install Windows build deps
-        if: runner.os == 'Windows'
-        run: |
-          choco install -y python3
-          choco install -y visualstudio2022buildtools --package-parameters "--add Microsoft.VisualStudio.Workload.VCTools"
-
-      - name: Install Linux build deps
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            build-essential \
-            python3 \
-            pkg-config \
-            libvips-dev
-
       - name: Install dependencies
         run: bun install
+
+      - name: Patch sharp loader
+        run: |
+          patch -p1 << 'EOF'
+          diff --git a/node_modules/sharp/lib/sharp.js b/node_modules/sharp/lib/sharp.js
+          index 3428c5fefae5c7fc02f18a6a9026ac6a7df190e4..fd8dbff27768dae8242f77eeeb53f4dc910fd0c3 100644
+          --- a/node_modules/sharp/lib/sharp.js
+          +++ b/node_modules/sharp/lib/sharp.js
+          @@ -6,6 +6,7 @@
+           // Inspects the runtime environment and exports the relevant sharp.node binary
+
+           const { familySync, versionSync } = require('detect-libc');
+          +const { join } = require('node:path');
+
+           const { runtimePlatformArch, isUnsupportedNodeRuntime, prebuiltPlatforms, minimumLibvipsVersion } = require('./libvips');
+           const runtimePlatform = runtimePlatformArch();
+          @@ -29,6 +30,11 @@ for (const path of paths) {
+             }
+           }
+
+          +if (!sharp && Bun.embeddedFiles.length) {
+          +  const sharpModule = Bun.embeddedFiles.find(file => /sharp-(.*).node$/.test(file.name));
+          +  sharp = require(join(import.meta.dirname, sharpModule.name));
+          +}
+          +
+           /* istanbul ignore next */
+           if (sharp) {
+             module.exports = sharp;
+          EOF
+
+      - name: Inject embedded sharp loader into index.ts
+        run: |
+          RUNTIME=$(node -e "console.log(require('./node_modules/sharp/lib/libvips').runtimePlatformArch())")
+          NODEFILE="node_modules/sharp/src/build/Release/sharp-${RUNTIME}.node"
+
+          IMPORT_LINE="import '../${NODEFILE}' with { type: 'file' }"
+
+          sed -i "2i ${IMPORT_LINE}" src/index.ts
 
       - name: Build the project
         run: bun run bundle
