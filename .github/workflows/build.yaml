@@ -23,11 +23,9 @@ jobs:
       - name: Install dependencies
         run: bun install
 
-      - name: Patch sharp loader
+      - name: Patch sharp.js for Bun embedded files
         run: |
           patch -p1 << 'EOF'
-          diff --git a/node_modules/sharp/lib/sharp.js b/node_modules/sharp/lib/sharp.js
-          index 3428c5fefae5c7fc02f18a6a9026ac6a7df190e4..fd8dbff27768dae8242f77eeeb53f4dc910fd0c3 100644
           --- a/node_modules/sharp/lib/sharp.js
           +++ b/node_modules/sharp/lib/sharp.js
           @@ -1,6 +1,7 @@
@@ -44,8 +42,6 @@ jobs:
           }
 
           +// Bun embedded file fallback
-          +// If Bun compiled the binary and embedded sharp-<platform>.node,
-          +// load it from Bun.embeddedFiles instead of filesystem paths
           +if (!sharp && typeof Bun !== 'undefined' && Bun.embeddedFiles?.length) {
           +  const embedded = Bun.embeddedFiles.find(f =>
           +    /sharp-(.*)\.node$/.test(f.name)
@@ -54,7 +50,7 @@ jobs:
           +    sharp = require(join(import.meta.dirname, embedded.name));
           +  }
           +}
-
+          +
           if (sharp && path && path.startsWith('@img/sharp-linux-x64') && !sharp._isUsingX64V2()) {
             const err = new Error('Prebuilt binaries for linux-x64 require v2 microarchitecture');
             err.code = 'Unsupported CPU';
