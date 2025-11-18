@@ -27,6 +27,7 @@ jobs:
         run: bun run bundle
 
       - name: Zip haax-blp folder (Windows)
+        id: zip_windows
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
@@ -34,6 +35,7 @@ jobs:
           Write-Output "artifact_file=haax-blp-windows.zip" >> $env:GITHUB_OUTPUT
 
       - name: Zip haax-blp folder (Linux)
+        id: zip_linux
         if: runner.os != 'Windows'
         shell: bash
         run: |
@@ -60,5 +62,5 @@ jobs:
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
-          files: ${{ steps.zip_haax_blp_windows.outputs.artifact_file || steps.zip_haax_blp_linux.outputs.artifact_file }}
+          files: ${{ steps.zip_windows.outputs.artifact_file || steps.zip_linux.outputs.artifact_file }}
           tag_name: ${{ steps.check_tag.outputs.tag_name }}
