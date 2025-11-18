@@ -23,35 +23,40 @@ jobs:
       - name: Install dependencies
         run: bun install
 
-      - name: Patch sharp.js for Bun embedded file loading
+      - name: Patch sharp.js for Bun embedded loader
         shell: bash
         run: |
-          patch -p1 << 'EOF'
-          --- a/node_modules/sharp/lib/sharp.js
-          +++ b/node_modules/sharp/lib/sharp.js
-          @@ -8,6 +8,7 @@
+          FILE="node_modules/sharp/lib/sharp.js"
 
-          const { familySync, versionSync } = require('detect-libc');
-          +const { join } = require('node:path');
-
-          const { runtimePlatformArch, isUnsupportedNodeRuntime, prebuiltPlatforms, minimumLibvipsVersion } = require('./libvips');
-          const runtimePlatform = runtimePlatformArch();
-          @@ -28,6 +29,14 @@ for (path of paths) {
-              errors.push(err);
+          # Insert: const { join } = require('node:path');
+          # After the detect-libc import line
+          awk '
+            /require..detect-libc../ {
+              print;
+              print "const { join } = require('\''node:path'\'');";
+              next
             }
-          }
-          +
-          +// Bun embedded file fallback
-          +if (!sharp && typeof Bun !== 'undefined' && Bun.embeddedFiles?.length) {
-          +  const sharpModule = Bun.embeddedFiles.find(file =>
-          +    /sharp-(.*)\.node$/.test(file.name)
-          +  );
-          +  if (sharpModule) sharp = require(join(import.meta.dirname, sharpModule.name));
-          +}
+            { print }
+          ' "$FILE" > "$FILE.tmp" && mv "$FILE.tmp" "$FILE"
 
-          if (sharp && path.startsWith('@img/sharp-linux-x64') && !sharp._isUsingX64V2()) {
-            const err = new Error('Prebuilt binaries for linux-x64 require v2 microarchitecture');
-          EOF
+          # Insert Bun embedded loader AFTER the for-loop ends
+          awk '
+            /for \(path of paths\)/ { inloop=1 }
+            inloop && /\}/ {
+              count++
+              if (count==1) {
+                print $0
+                print ""
+                print "// Bun embedded file fallback"
+                print "if (!sharp && typeof Bun !== '\''undefined'\'' && Bun.embeddedFiles?.length) {"
+                print "  const sharpModule = Bun.embeddedFiles.find(file => /sharp-(.*)\\.node$/.test(file.name));"
+                print "  if (sharpModule) sharp = require(join(import.meta.dirname, sharpModule.name));"
+                print "}"
+                next
+              }
+            }
+            { print }
+          ' "$FILE" > "$FILE.tmp" && mv "$FILE.tmp" "$FILE"
 
       - name: Inject embedded sharp loader into index.ts
         run: |
