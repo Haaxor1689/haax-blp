@@ -61,7 +61,7 @@ jobs:
       - name: Inject embedded sharp loader into index.ts
         run: |
           RUNTIME=$(node -e "console.log(require('./node_modules/sharp/lib/libvips').runtimePlatformArch())")
-          NODEFILE="node_modules/sharp/src/build/Release/sharp-${RUNTIME}.node"
+          NODEFILE="node_modules/@img/sharp-${RUNTIME}/lib/sharp-${RUNTIME}.node"
 
           IMPORT_LINE="import '../${NODEFILE}' with { type: 'file' }"
 
