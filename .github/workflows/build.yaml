@@ -23,56 +23,35 @@ jobs:
       - name: Install dependencies
         run: bun install
 
-      - name: Patch sharp.js for Bun embedded loader
-        shell: bash
-        run: |
-          FILE="node_modules/sharp/lib/sharp.js"
-
-          # Insert: const { join } = require('node:path');
-          # After the detect-libc import line
-          awk '
-            /require..detect-libc../ {
-              print;
-              print "const { join } = require('\''node:path'\'');";
-              next
-            }
-            { print }
-          ' "$FILE" > "$FILE.tmp" && mv "$FILE.tmp" "$FILE"
-
-          # Insert Bun embedded loader AFTER the for-loop ends
-          awk '
-            /for \(path of paths\)/ { inloop=1 }
-            inloop && /\}/ {
-              count++
-              if (count==1) {
-                print $0
-                print ""
-                print "// Bun embedded file fallback"
-                print "if (!sharp && typeof Bun !== '\''undefined'\'' && Bun.embeddedFiles?.length) {"
-                print "  const sharpModule = Bun.embeddedFiles.find(file => /sharp-(.*)\\.node$/.test(file.name));"
-                print "  if (sharpModule) sharp = require(join(import.meta.dirname, sharpModule.name));"
-                print "}"
-                next
-              }
-            }
-            { print }
-          ' "$FILE" > "$FILE.tmp" && mv "$FILE.tmp" "$FILE"
-
-      - name: Inject embedded sharp loader into index.ts
-        shell: bash
-        run: |
-          RUNTIME=$(node -e "console.log(require('./node_modules/sharp/lib/libvips').runtimePlatformArch())")
-          NODEFILE="node_modules/@img/sharp-${RUNTIME}/lib/sharp-${RUNTIME}.node"
-
-          IMPORT_LINE="import '../${NODEFILE}' with { type: 'file' }"
-
-          sed -i "2i ${IMPORT_LINE}" src/index.ts
-
       - name: Build the project
         run: bun run bundle
 
+      - name: Zip haax-blp folder (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          if (Test-Path haax-blp) {
+            Compress-Archive -Path haax-blp -DestinationPath haax-blp-windows.zip -Force
+          } else {
+            Write-Error "haax-blp folder not found"
+            exit 1
+          }
+          Write-Output "artifact_file=haax-blp-windows.zip" >> $env:GITHUB_OUTPUT
+
+      - name: Zip haax-blp folder (Linux)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          if [ ! -d "haax-blp" ]; then
+            echo "ERROR: haax-blp folder not found"
+            exit 1
+          fi
+          zip -r haax-blp-linux.zip haax-blp
+          echo "artifact_file=haax-blp-linux.zip" >> $GITHUB_OUTPUT
+
       - name: Check if Tag Exists
         id: check_tag
+        shell: bash
         run: |
           version=$(bun -e "console.log(require('./package.json').version)")
           tag_exists=$(git ls-remote --tags origin "refs/tags/v$version")
@@ -86,17 +65,6 @@ jobs:
             echo "Tag v$version already exists."
           fi
           echo "::set-output name=tag_name::v$version"
-        shell: bash
-
-      - name: Determine Artifact File
-        id: determine_artifact
-        run: |
-          if [ "${{ runner.os }}" == "Windows" ]; then
-            echo "::set-output name=artifact_file::haax-blp.exe"
-          else
-            echo "::set-output name=artifact_file::haax-blp"
-          fi
-        shell: bash
 
       - name: Release
         uses: softprops/action-gh-release@v1

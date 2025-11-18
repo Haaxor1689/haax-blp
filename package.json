@@ -22,7 +22,7 @@
   ],
   "scripts": {
     "dev": "bun run src/index.ts",
-    "bundle": "bun build ./src/index.ts --compile --minify --outfile haax-blp",
+    "bundle": "bun build ./src/index.ts --compile --minify --outfile haax-blp/haax-blp && bun ./post-build.ts",
     "build": "tsup src/blp/index.ts --format esm,cjs --dts --minify",
     "prepublish": "bun run build"
   },
