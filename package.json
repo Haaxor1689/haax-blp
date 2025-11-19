@@ -1,6 +1,6 @@
 {
   "name": "haax-blp",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "author": "Haaxor1689",
   "license": "MIT",
   "repository": {
@@ -23,7 +23,7 @@
   "scripts": {
     "dev": "bun run src/index.ts",
     "bundle": "bun build ./src/index.ts --compile --minify --outfile haax-blp/haax-blp && bun ./post-build.ts",
-    "build": "tsup src/blp/index.ts --format esm,cjs --dts --minify",
+    "build": "tsup src/blp/index.ts --format esm,cjs --dts --minify --external sharp,jimp",
     "prepublish": "bun run build"
   },
   "devDependencies": {
