@@ -103,7 +103,7 @@ export const PackedArray = (bits: number, length: number) =>
       return arr;
     },
     ctx => {
-      const buffer = Buffer.alloc((ctx.value.length * bits) / 8, 0);
+      const buffer = new Uint8Array((ctx.value.length * bits) / 8);
       let i = 0;
       while (i < buffer.length * 8) {
         const bit = i % 8;
