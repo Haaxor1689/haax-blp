@@ -24,29 +24,18 @@ export const BlpCompression = n.enum(n.uint8(), [
 ]);
 export type BlpCompression = n.output<typeof BlpCompression>;
 
-export const toBlpMipMap = (mipMap: number) => {
-  switch (mipMap) {
-    case 0:
-      return 'MIPS_NONE';
-    default:
-      return 'MIPS_GENERATED';
-    case 2:
-      return 'MIPS_HANDMADE';
-  }
-};
+export const BlpMipMap = [
+  'MIPS_NONE',
+  'MIPS_GENERATED',
+  'MIPS_HANDMADE'
+] as const;
 
-export const fromBlpMipMap = (mipMap: BlpMipMap) => {
-  switch (mipMap) {
-    case 'MIPS_NONE':
-      return 0;
-    default:
-      return 1;
-    case 'MIPS_HANDMADE':
-      return 2;
-  }
-};
+export const toBlpMipMap = (mipMap: number) =>
+  BlpMipMap[mipMap] ?? 'MIPS_GENERATED';
 
-export type BlpMipMap = ReturnType<typeof toBlpMipMap>;
+export const fromBlpMipMap = (mipMap: BlpMipMap) => BlpMipMap.indexOf(mipMap);
+
+export type BlpMipMap = (typeof BlpMipMap)[number];
 
 /**
  * Creates a schema for BLP palette data, which includes an image array and
