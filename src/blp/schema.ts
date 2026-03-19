@@ -5,9 +5,10 @@ import RgbQuant from 'rgbquant';
 import {
   BlpCompression,
   BlpFormat,
-  BlpMipMap,
   FixedArray,
-  BlpPaletteData
+  BlpPaletteData,
+  toBlpMipMap,
+  fromBlpMipMap
 } from './utils';
 
 const IMAGE_DATA_OFFSET = 148; // BLP header size
@@ -51,7 +52,7 @@ export const Blp = n
     format: BlpFormat,
     alphaSize: n.uint8(),
     compression: BlpCompression,
-    mipMaps: BlpMipMap,
+    mipMaps: n.uint8(),
 
     width: n.int32(),
     height: n.int32(),
@@ -63,7 +64,7 @@ export const Blp = n
   })
   .transform(
     async ctx => {
-      const { imageData, mipOffsets, mipSizes, ...v } = ctx.value;
+      const { imageData, mipMaps, mipOffsets, mipSizes, ...v } = ctx.value;
 
       const palette =
         v.format === 'COLOR_PALETTE'
@@ -112,8 +113,8 @@ export const Blp = n
                     v.compression === 'PIXEL_DXT1'
                       ? dxtJs.flags.DXT1
                       : v.compression === 'PIXEL_DXT3'
-                      ? dxtJs.flags.DXT3
-                      : dxtJs.flags.DXT5
+                        ? dxtJs.flags.DXT3
+                        : dxtJs.flags.DXT5
                   )
                 );
                 break;
@@ -159,13 +160,13 @@ export const Blp = n
             return { buffer, width, height };
           })
       );
-      return { ...v, mips };
+      return { ...v, mipMaps: toBlpMipMap(mipMaps), mips } as const;
     },
     async ctx => {
-      const { mips, ...v } = ctx.value;
+      const { mips, mipMaps, ...v } = ctx.value;
 
       const getMips = async () => {
-        switch (v.mipMaps) {
+        switch (mipMaps) {
           case 'MIPS_NONE':
             return [mips[0]];
           case 'MIPS_HANDMADE':
@@ -252,8 +253,8 @@ export const Blp = n
                 v.compression === 'PIXEL_DXT1'
                   ? dxtJs.flags.DXT1
                   : v.compression === 'PIXEL_DXT3'
-                  ? dxtJs.flags.DXT3
-                  : dxtJs.flags.DXT5
+                    ? dxtJs.flags.DXT3
+                    : dxtJs.flags.DXT5
               )
             );
             break;
@@ -285,12 +286,12 @@ export const Blp = n
                   v.alphaSize === 8
                     ? x[3]
                     : v.alphaSize === 4
-                    ? Math.round((x[3] / 255) * 15)
-                    : v.alphaSize === 2
-                    ? Math.round((x[3] / 255) * 3)
-                    : x[3] !== 0
-                    ? 1
-                    : 0
+                      ? Math.round((x[3] / 255) * 15)
+                      : v.alphaSize === 2
+                        ? Math.round((x[3] / 255) * 3)
+                        : x[3] !== 0
+                          ? 1
+                          : 0
                 )
               })
             );
@@ -312,6 +313,7 @@ export const Blp = n
 
       return {
         ...v,
+        mipMaps: fromBlpMipMap(mipMaps),
         mipOffsets: buffers.reduce(
           (acc, val, i) => {
             if (i === buffers.length - 1) return acc;
